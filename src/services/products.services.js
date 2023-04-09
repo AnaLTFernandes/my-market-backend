@@ -1,9 +1,29 @@
-import { ObjectId } from "mongodb";
 import { productsRepository } from "../repositories/products.repository.js";
 import { categoriesRepository } from "../repositories/categories.repository.js";
 
-async function listAll() {
-	const products = await productsRepository.findAll();
+async function listAll({
+	page,
+	name,
+	minPrice,
+	maxPrice,
+	promotion,
+	categoryId,
+}) {
+	const repositoryFunction = categoryId ? "findAllByCategoryId" : "findAll";
+
+	const products = await productsRepository[repositoryFunction]({
+		page: {
+			start: (page - 1) * 10,
+			nPerPage: 10,
+		},
+		filter: {
+			name,
+			minPrice,
+			maxPrice,
+			promotion: getPromotionValue(promotion),
+			categoryId,
+		},
+	});
 
 	const formattedProducts = products.map(
 		({ description, originalPrice, promotionPrice, ...product }) => ({
@@ -25,6 +45,13 @@ async function findById(id) {
 	const formattedProduct = { ...product, categoryName: category.name };
 
 	return formattedProduct;
+}
+
+function getPromotionValue(promotion) {
+	if (promotion === "true") return [true];
+	if (promotion === "false") return [false];
+
+	return [true, false];
 }
 
 const productsService = { listAll, findById };
